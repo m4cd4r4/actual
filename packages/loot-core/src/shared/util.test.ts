@@ -3,6 +3,7 @@ import {
   getNumberFormat,
   looselyParseAmount,
   setNumberFormat,
+  shouldApplyRuleDiffField,
   stringToInteger,
   titleFirst,
 } from './util';
@@ -236,5 +237,52 @@ describe('utility functions', () => {
     expect(stringToInteger('-3')).toBe(-3);
     // Unicode minus
     expect(stringToInteger('−3')).toBe(-3);
+  });
+
+  describe('shouldApplyRuleDiffField', () => {
+    test('applies when field is empty', () => {
+      expect(shouldApplyRuleDiffField('notes', null, 'hello', null)).toBe(true);
+      expect(shouldApplyRuleDiffField('notes', '', 'hello', null)).toBe(true);
+      expect(shouldApplyRuleDiffField('category', null, 'abc', null)).toBe(
+        true,
+      );
+      expect(shouldApplyRuleDiffField('amount', 0, 100, null)).toBe(true);
+      expect(shouldApplyRuleDiffField('cleared', false, true, null)).toBe(true);
+    });
+
+    test('applies for payee-triggered updates regardless of current value', () => {
+      expect(
+        shouldApplyRuleDiffField('notes', 'existing', 'new', 'payee'),
+      ).toBe(true);
+      expect(shouldApplyRuleDiffField('category', 'a', 'b', 'payee')).toBe(
+        true,
+      );
+    });
+
+    test('applies for notes when result is an append (starts with current)', () => {
+      expect(
+        shouldApplyRuleDiffField('notes', 'Coffee', 'Coffee #restaurant', null),
+      ).toBe(true);
+    });
+
+    test('applies for notes when result is a prepend (ends with current)', () => {
+      expect(
+        shouldApplyRuleDiffField('notes', 'Coffee', '#restaurant Coffee', null),
+      ).toBe(true);
+    });
+
+    test('does not apply for notes when result is an unrelated set', () => {
+      expect(shouldApplyRuleDiffField('notes', 'Coffee', 'Tea', null)).toBe(
+        false,
+      );
+      expect(
+        shouldApplyRuleDiffField('notes', 'Coffee', 'xCoffeex', null),
+      ).toBe(false);
+    });
+
+    test('does not apply for non-empty non-notes fields', () => {
+      expect(shouldApplyRuleDiffField('category', 'a', 'b', null)).toBe(false);
+      expect(shouldApplyRuleDiffField('amount', 100, 200, null)).toBe(false);
+    });
   });
 });

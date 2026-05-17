@@ -29,6 +29,53 @@ export function getChangedValues<T extends { id?: string }>(obj1: T, obj2: T) {
   return hasChanged ? diff : null;
 }
 
+/**
+ * Decides whether a field diff produced by rules should be applied to the
+ * working transaction (e.g. when a field changes on a new transaction row).
+ *
+ * Rules:
+ * - Always apply when the payee was the field that just changed (prefill mode).
+ * - Always apply when the current field value is empty/falsy.
+ * - For the notes field: also apply when the rule result clearly extends the
+ *   existing value (i.e. it starts or ends with the current notes), which is
+ *   exactly what append-notes and prepend-notes actions produce.
+ * - For all other non-empty fields: do not overwrite.
+ */
+export function shouldApplyRuleDiffField(
+  field: string,
+  currentValue: unknown,
+  nextValue: unknown,
+  updatedField: string | null = null,
+): boolean {
+  if (updatedField === 'payee') {
+    return true;
+  }
+
+  if (
+    currentValue == null ||
+    currentValue === '' ||
+    currentValue === 0 ||
+    currentValue === false
+  ) {
+    return true;
+  }
+
+  if (
+    field === 'notes' &&
+    typeof currentValue === 'string' &&
+    typeof nextValue === 'string'
+  ) {
+    // Apply when the result is a strict extension of the current value,
+    // which is what append-notes/prepend-notes produce.
+    return (
+      nextValue.length > currentValue.length &&
+      (nextValue.startsWith(currentValue) || nextValue.endsWith(currentValue))
+    );
+  }
+
+  return false;
+}
+
 export function hasFieldsChanged<T extends object>(
   obj1: T,
   obj2: T,

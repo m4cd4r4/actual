@@ -18,7 +18,11 @@ import {
   splitTransaction,
   updateTransaction,
 } from '@actual-app/core/shared/transactions';
-import { applyChanges, getChangedValues } from '@actual-app/core/shared/util';
+import {
+  applyChanges,
+  getChangedValues,
+  shouldApplyRuleDiffField,
+} from '@actual-app/core/shared/util';
 import type {
   AccountEntity,
   CategoryEntity,
@@ -536,10 +540,12 @@ export function TransactionList({
       if (diff) {
         Object.keys(diff).forEach(field => {
           if (
-            newTransaction[field] == null ||
-            newTransaction[field] === '' ||
-            newTransaction[field] === 0 ||
-            newTransaction[field] === false
+            shouldApplyRuleDiffField(
+              field,
+              newTransaction[field],
+              diff[field],
+              updatedFieldName,
+            )
           ) {
             newTransaction[field] = diff[field];
           }
